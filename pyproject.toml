@@ -1,0 +1,27 @@
+[project]
+name = "SkiSensorDevTool"
+version = "0.0.1"
+description = "Development application to help control and maintain a ski sensor device."
+authors = [
+    {name = "Nick Melville",email = "melville.nj@gmail.com"}
+]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "bleak==3.0.1",
+    "click (==8.3.1)",
+    "pyserial==3.5",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "skisensor-admin-app"
+packages = [{ include = "SkiSensorDevTool", from = "src" },]
+
+[tool.poetry.scripts]
+ssdevtool = "SkiSensorDevTool.cli.cli:main"
