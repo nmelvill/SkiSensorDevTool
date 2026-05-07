@@ -1,0 +1,37 @@
+{
+  "control_service": {
+    "uuid": "3f21a69c-d547-48be-95c4-7d3682e740ad",
+    "characteristics": {
+      "control_point": "3f21a69d-d547-48be-95c4-7d3682e740ae",
+      "command_response": "3f21a69e-d547-48be-95c4-7d3682e740af"
+    }
+  },
+  "data_service": {
+    "uuid": "2045f258-42a2-4336-8b47-591dfd8ab5f8",
+    "characteristics": {
+      "mag_data": "2045f259-42a2-4336-8b47-591dfd8ab5f9",
+      "imu_data": "2045f25a-42a2-4336-8b47-591dfd8ab5fa",
+      "step_data": "2045f25b-42a2-4336-8b47-591dfd8ab5fb",
+      "orientation_data": "2045f25c-42a2-4336-8b47-591dfd8ab5fc"
+    }
+  },
+  "event_service": {
+    "uuid": "5e9bf4a1-83c6-4b98-a8c2-16d45f7c29e0",
+    "characteristics": {
+      "event": "5e9bf4a2-83c6-4b98-a8c2-16d45f7c29e1"
+    }
+  },
+  "device_information_service": {
+    "uuid": "0a6a425e-8b04-4e97-b20e-74c4cc9896b2",
+    "characteristics": {
+      "status": "0a6a425f-8b04-4e97-b20e-74c4cc9896b3",
+      "fw_version": "0a6a4260-8b04-4e97-b20e-74c4cc9896b4",
+      "hw_version": "0a6a4261-8b04-4e97-b20e-74c4cc9896b5",
+      "serial_number": "0a6a4262-8b04-4e97-b20e-74c4cc9896b6",
+      "battery": "0a6a4263-8b04-4e97-b20e-74c4cc9896b7",
+      "logs": "0a6a4264-8b04-4e97-b20e-74c4cc9896b8",
+      "error": "0a6a4265-8b04-4e97-b20e-74c4cc9896b9",
+      "device_name": "0a6a4266-8b04-4e97-b20e-74c4cc9896b4"
+    }
+  }
+}

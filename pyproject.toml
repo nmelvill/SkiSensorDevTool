@@ -24,4 +24,10 @@ name = "skisensor-admin-app"
 packages = [{ include = "SkiSensorDevTool", from = "src" },]
 
 [tool.poetry.scripts]
-ssdevtool = "SkiSensorDevTool.cli.cli:main"
+ssdt = "SkiSensorDevTool.cli.cli:main"
+
+
+[tool.pyright]
+pythonVersion = "3.14"
+include = ["src"]
+typeCheckingMode = "basic"

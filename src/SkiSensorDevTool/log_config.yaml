@@ -1,0 +1,29 @@
+version: 1
+formatters:
+  file:
+    format: '%(asctime)s | %(levelname)s | %(module)s.%(funcName)s() line %(lineno)d: %(message)s'
+    datefmt: '%H:%M:%S'
+  stream:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%H:%M:%S'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: stream
+    stream: ext://sys.stdout
+  file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: file
+    filename: logs/ssdevtool.log
+    when: 'm'
+    interval: 1
+loggers:
+  sslogger:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+# root:
+#   level: DEBUG
+#   handlers: [console]
