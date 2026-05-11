@@ -9,7 +9,7 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
+    #level: DEBUG
     formatter: stream
     stream: ext://sys.stdout
   file:
@@ -21,9 +21,9 @@ handlers:
     interval: 1
 loggers:
   sslogger:
-    level: DEBUG
+    #level: DEBUG
     handlers: [console, file]
     propagate: no
-  root:
-    level: INFO
-    handlers: [console, file]
+  # root:
+  #   level: INFO
+  #   handlers: [console, file]

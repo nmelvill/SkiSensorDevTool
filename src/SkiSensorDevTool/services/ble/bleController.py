@@ -1,3 +1,4 @@
+from SkiSensorDevTool.utils.ssmessage import SSMessage
 from asyncio.locks import Event
 from bleak.backends.device import BLEDevice
 from asyncio.events import AbstractEventLoop
@@ -48,7 +49,7 @@ class BLEController:
     def _run_sync(self, coro, timeout=15):
         """Helper to run async code synchronously from the background thread."""
         future = asyncio.run_coroutine_threadsafe(coro, loop=self.ble_loop)
-        
+
         try:
             result: Any = future.result(timeout=timeout)
             return result
@@ -59,7 +60,6 @@ class BLEController:
             # This catches the BleakError raised in the coroutine
             print(f"Sync call failed with: {e}")
             raise e
-
 
     # --- Callback functions ---
 
@@ -116,10 +116,6 @@ class BLEController:
             break
 
         return device
-
-    async def _open_scan(self):
-        """Returns all of the available BLE devices found in the scan"""
-        pass
 
     async def _connect(self, ble_device: BLEDevice) -> BleakClient:
         """Connect to a target ble device, returns the connection"""
@@ -182,17 +178,21 @@ class BLEController:
 
     async def _disconnect(self) -> None:
         """Disconnects an active connection with a ble device"""
-        
+
         if self.ble_client.is_connected:
-            logger.debug(f"Attempting to disconnect from the ski sensor device {self.ble_client.name}")
-            
+            logger.debug(
+                f"Attempting to disconnect from the ski sensor device {self.ble_client.name}"
+            )
+
             try:
                 await self.ble_client.disconnect()
                 logger.info(f"Successfully disconnected from {self.ble_client.name}")
-                logger.debug(msg=f'Connection status {self.ble_client.is_connected}')
+                logger.debug(msg=f"Connection status {self.ble_client.is_connected}")
 
             except Exception as e:
-                logger.error(f"Error occured when disconnecting from device. Exception: {e}")
+                logger.error(
+                    f"Error occured when disconnecting from device. Exception: {e}"
+                )
 
     async def _pair(self, client: BleakClient):
         logger.debug(msg="Pairing with device...")
@@ -207,15 +207,22 @@ class BLEController:
             logger.error(msg=f"Traceback: {traceback_str}")
             raise e
 
-    async def _write_char(self, char_name, payload) -> None:
+    async def _write_char(self, char_name, payload, response) -> None:
         """Writes to a specified characteristic"""
 
+        logger.debug(msg=f"Writing {payload} to {char_name}")
         if self.ble_client.is_connected:
-            await self.ble_client.write_gatt_char(
-                char_specifier=bleUtils.map_gatt_UUID(param_name=char_name),
-                data=payload,
-                response=False,
-            )
+            try:
+                await self.ble_client.write_gatt_char(
+                    char_specifier=bleUtils.map_gatt_UUID(param_name=char_name),
+                    data=payload,
+                    response=response,
+                )
+
+                logger.debug(msg="Writing succeeded")
+            except Exception as e:
+                logger.error(msg=f"Exception writing to characteristing {char_name}: {e}")
+
         else:
             logger.warning(msg=f"Device {self.ble_client.name} is not connected")
 
@@ -236,6 +243,7 @@ class BLEController:
 
             except Exception as e:
                 logger.error(msg=f"Reading {char_name} failed with Exception: {e}")
+                raise e
 
         else:
             logger.warning(msg=f"Device {self.ble_client.name} is not connected")
@@ -253,12 +261,17 @@ class BLEController:
     def read_char(self, char_name) -> bytearray:
         return self._run_sync(coro=self._read_char(char_name=char_name))
 
+    def write_char(self,char_name, payload, response=False) -> None:
+        return self._run_sync(coro=self._write_char(char_name=char_name, payload=payload, response=response))
+
     def disconnect(self) -> None:
         return self._run_sync(coro=self._disconnect())
 
 
 if __name__ == "__main__":
     import SkiSensorDevTool.utils.logging
+    from SkiSensorDevTool.utils.ssmessage import SSMessage
+    import time
 
     controller: BLEController = BLEController()
 
@@ -267,5 +280,12 @@ if __name__ == "__main__":
     ss_client: BleakClient = controller.connect(device=ss_ble_device)
 
     data: bytearray = controller.read_char(char_name="fw_version")
+
+    message: SSMessage = SSMessage(name="ssssid")
+
+    controller.write_char(char_name='control_point', payload=message.name)
+
+    time.sleep(10)
+
 
     controller.disconnect()
