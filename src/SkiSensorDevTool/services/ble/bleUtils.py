@@ -1,28 +1,31 @@
-from logging import Formatter, Logger, StreamHandler
-
-
+from logging import Logger
 import json
 from pathlib import Path
 from typing import Any
 import logging
-import logging.config
-import yaml
+import SkiSensorDevTool.utils.logging
 
-config: dict[Any, Any] = {}
-
-with open(file="src/SkiSensorDevTool/log_config.yaml", mode='rt') as logconfig:
-    config = yaml.safe_load(stream=logconfig.read())
-
-logging.config.dictConfig(config)
-logger: Logger = logging.getLogger(name="sslogger")
-logger.setLevel(level=logging.DEBUG)
+logger: Logger = logging.getLogger(name=__name__)
+logger.setLevel(level=logging.INFO)
+logger.info(msg=f'Hello from {__name__}')
 
 
 def map_gatt_UUID(param_name : str) -> str:
     '''Takes in the name of a GATT parameter and returns the correct UUID for that parameter'''
     
-    logger.debug(f"Mapping parameter {param_name} to gatt aatribute uuid")
-    return get_nested_value(dictionary=load_ble_config(),key=param_name)  # pyright: ignore[reportReturnType]
+    logger.debug(msg=f"Mapping parameter {param_name} to gatt aatribute uuid")
+
+    config: dict[Any, Any] = load_ble_config()
+    uuid : str = ""
+    
+    if param_name in  config:
+        uuid = config[param_name]["uuid"]
+    else:
+        uuid = get_nested_value(dictionary=config,key=param_name)   # pyright: ignore[reportAssignmentType]
+
+    logger.debug(msg=f"Parameter name {param_name} found and mapped to uuid {uuid}")
+    
+    return uuid
 
 def load_ble_config() -> dict:
     '''Loads the BLE config and returns a dictionary with those values'''
@@ -32,12 +35,12 @@ def load_ble_config() -> dict:
     ble_config: Path = current_file.parent / 'bleConfig.json'
 
     config_dict: dict = {}
-
+    
     with open(file=ble_config) as jsonfile:
         config_dict = json.load(fp=jsonfile)
 
-    logger.info(f"BLE config file opened and loaded from {ble_config}")
-    logger.debug(f"BLE Config: {config_dict}")
+    logger.debug(msg=f"BLE config file opened and loaded from {ble_config}")
+    logger.debug(msg=f"BLE Config: {config_dict}")
 
     return config_dict
 
@@ -61,9 +64,9 @@ def get_nested_value(dictionary : dict, key :str) -> str | None:
 
 
 if __name__ == '__main__':
+    import SkiSensorDevTool.utils.logging
 
-    
-    load_ble_config()
+    map_gatt_UUID(param_name="device_information_service")
 
 
 

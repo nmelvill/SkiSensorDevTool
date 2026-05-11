@@ -12,6 +12,8 @@ dependencies = [
     "bleak==3.0.1",
     "click (==8.3.1)",
     "pyserial==3.5",
+    "PyYAML==6.0.3", 
+    "dbus-fast==4.0.4"
 ]
 
 
@@ -31,3 +33,5 @@ ssdt = "SkiSensorDevTool.cli.cli:main"
 pythonVersion = "3.14"
 include = ["src"]
 typeCheckingMode = "basic"
+
+[tool.ruff]
