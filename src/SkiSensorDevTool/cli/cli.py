@@ -1,7 +1,5 @@
 import click
-import SkiSensorDevTool.cli.clicommands as cli_commands
 from bleak.backends.device import BLEDevice
-from bleak import BleakClient
 from SkiSensorDevTool.services.ble.bleController import BLEController
 import SkiSensorDevTool.utils.return_handler as return_handler
 

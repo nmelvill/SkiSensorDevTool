@@ -13,7 +13,6 @@ import traceback
 from . import bleUtils
 import asyncio
 from bleak import BleakScanner, BleakClient
-from bleak.backends.scanner import AdvertisementData
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from threading import Thread
 
@@ -107,9 +106,9 @@ class BLEController:
         """Callback function to handle events from the device."""
 
         logger.debug(msg=f"Event received from {sender}: {data}")
-        data_: bytearray = data[
-            2:-1
-        ]  # Exclude the last byte which is a null terminator`
+        # data_: bytearray = data[
+        #     2:-1
+        # ]  # Exclude the last byte which is a null terminator`
 
     def command_response_callback(
         self, sender: BleakGATTCharacteristic, data: bytearray
@@ -167,7 +166,7 @@ class BLEController:
             await self.ble_client.connect()
         except Exception as e:
             logger.error(
-                f"Error connecting to BLE Device {ble_device.name} {ble_device.address}"
+                f"Error connecting to BLE Device {ble_device.name} {ble_device.address}. Exception: {e}"
             )
 
         logger.info(
@@ -321,7 +320,7 @@ class BLEController:
 
 
 if __name__ == "__main__":
-    import SkiSensorDevTool.utils.logging
+    import SkiSensorDevTool.utils.logging  # pyright: ignore[reportUnusedImport]  # noqa: F401
     from SkiSensorDevTool.utils.ss_message import SSMessage
     import SkiSensorDevTool.utils.return_handler as handler
     import time
