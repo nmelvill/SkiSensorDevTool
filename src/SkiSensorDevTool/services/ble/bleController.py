@@ -1,11 +1,12 @@
-from SkiSensorDevTool.utils.ssmessage import SSMessage
+from pyclbr import Function
+from SkiSensorDevTool.utils.ss_message import SSMessage
 from asyncio.locks import Event
 from bleak.backends.device import BLEDevice
 from asyncio.events import AbstractEventLoop
 from bleak.backends.service import BleakGATTServiceCollection
 from logging import Logger
 import SkiSensorDevTool.utils.logging
-from typing import Any
+from typing import Any, Callable
 import logging
 import logging.config
 import traceback
@@ -20,6 +21,12 @@ from threading import Thread
 logger: Logger = logging.getLogger(name=__name__)
 logger.setLevel(level=logging.DEBUG)
 logger.info(f"Logging from {__name__}")
+
+#The bluez backend logs too much
+bleaklogger: Logger = logging.getLogger("bleak.backends.bluezdbus.manager")
+bleaklogger.setLevel(level=logging.INFO)
+
+
 
 
 class BLEController:
@@ -39,8 +46,29 @@ class BLEController:
             msg=f"Thread: {self.thread.name} created and is running?: {self.thread.is_alive()}"
         )
         logger.debug(
-            msg=f"Eventloop {self.ble_loop} initialized and is runnign?:{self.ble_loop.is_running()}"
+            msg=f"Eventloop {self.ble_loop} initialized and is running?:{self.ble_loop.is_running()}"
         )
+
+        self.onEvent_cb: Function
+        self.onCommandResponse_cb: Function
+
+    def __del__(self) -> None:
+
+        logger.debug("Attmpting to clean up connection and threads safely")
+        if self.ble_client.is_connected:
+            try:
+                self.disconnect()
+            except Exception as e:
+                logger.error(f"Exception when attempting to disconnect from {self.ble_client.address}: {e}")
+                raise e
+
+            try:
+                self.thread.join()
+            except Exception as e:
+                logger.error(msg=f"Exception when attempting to close the BLE thread: {e}")
+                raise e
+
+            
 
     def _run_loop(self) -> None:
         asyncio.set_event_loop(loop=self.ble_loop)
@@ -117,8 +145,17 @@ class BLEController:
 
         return device
 
-    async def _connect(self, ble_device: BLEDevice) -> BleakClient:
-        """Connect to a target ble device, returns the connection"""
+    async def _connect(self, ble_device: BLEDevice, onEvent_cb=None, onCommandResponse_cb=None) -> BleakClient:
+        """Connect to a target ble device, returns the connections as a Bleak Client
+        
+        Argumemts:
+            ble_device: Instance of a ble_device type from Bleak that was found during the scanning function
+            onEvent_cb: Callback function that will trigger when an event occurs on the ski sensor (default = {None})
+            onCommandResponse_cb: Callback function that will trigger when the response from a command call returns from the ski sensor (default = {None})
+
+        Returns:
+            BleakClient: instance of a Bleak Client that holds the connection information
+        """
         logger.debug(msg=f"Attempting to connect to device: {ble_device}")
 
         self.ble_client: BleakClient = BleakClient(
@@ -146,10 +183,25 @@ class BLEController:
 
         logger.debug(msg="Enabling notifications")
 
+
+        eventcb: Callable[..., None] = self.device_event_callback
+
+        if onEvent_cb:
+            eventcb = onEvent_cb
+
+            logger.debug("Event callback is not none, assigning it to notify caller")
+
+        commandcb: Callable[..., None] = self.command_response_callback
+
+        if onCommandResponse_cb:
+
+            commandcb = self.command_response_callback
+            logger.debug("Command response callback is not none, assigning it to notify caller")
+
         try:
             await self.ble_client.start_notify(
                 char_specifier=bleUtils.map_gatt_UUID(param_name="event"),
-                callback=self.device_event_callback,
+                callback=eventcb,
             )
         except Exception as e:
             logger.error(
@@ -161,7 +213,7 @@ class BLEController:
         try:
             await self.ble_client.start_notify(
                 char_specifier=bleUtils.map_gatt_UUID(param_name="command_response"),
-                callback=self.command_response_callback,
+                callback=commandcb,
             )
         except Exception as e:
             logger.error(
@@ -255,8 +307,8 @@ class BLEController:
     def scan(self) -> BLEDevice:
         return self._run_sync(coro=self._scan(), timeout=120)
 
-    def connect(self, device: BLEDevice) -> BleakClient:
-        return self._run_sync(coro=self._connect(ble_device=device))
+    def connect(self, device: BLEDevice,onEvent_cb=None, onCommandResponse_cb=None) -> BleakClient:
+        return self._run_sync(coro=self._connect(ble_device=device,onEvent_cb=onEvent_cb, onCommandResponse_cb=onCommandResponse_cb))
 
     def read_char(self, char_name) -> bytearray:
         return self._run_sync(coro=self._read_char(char_name=char_name))
@@ -270,16 +322,24 @@ class BLEController:
 
 if __name__ == "__main__":
     import SkiSensorDevTool.utils.logging
-    from SkiSensorDevTool.utils.ssmessage import SSMessage
+    from SkiSensorDevTool.utils.ss_message import SSMessage
+    import SkiSensorDevTool.utils.return_handler as handler
     import time
 
     controller: BLEController = BLEController()
 
+    def event_callback(sender: BleakGATTCharacteristic, data: bytearray) -> None:
+        logger.debug(msg=f"Event received to the CALLER from {sender}: {data}")
+
     # asyncio.run(main=controller.start_ble(), debug=True)
     ss_ble_device: BLEDevice = controller.scan()
-    ss_client: BleakClient = controller.connect(device=ss_ble_device)
+    ss_client: BleakClient = controller.connect(device=ss_ble_device, onEvent_cb=event_callback)
 
     data: bytearray = controller.read_char(char_name="fw_version")
+
+    fw_version: str = handler.handle_fw_version(raw_value=data)
+
+    logger.debug(f"Firmware version: {fw_version}")
 
     message: SSMessage = SSMessage(name="ssssid")
 
