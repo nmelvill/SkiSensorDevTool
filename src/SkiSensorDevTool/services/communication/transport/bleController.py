@@ -1,5 +1,5 @@
+from concurrent.futures._base import Future
 from pyclbr import Function
-from SkiSensorDevTool.utils.ss_message import SSMessage
 from asyncio.locks import Event
 from bleak.backends.device import BLEDevice
 from asyncio.events import AbstractEventLoop
@@ -10,7 +10,7 @@ from typing import Any, Callable
 import logging
 import logging.config
 import traceback
-from . import bleUtils
+from .. import bleUtils
 import asyncio
 from bleak import BleakScanner, BleakClient
 from bleak.backends.characteristic import BleakGATTCharacteristic
@@ -19,11 +19,14 @@ from threading import Thread
 
 logger: Logger = logging.getLogger(name=__name__)
 logger.setLevel(level=logging.DEBUG)
-logger.info(f"Logging from {__name__}")
+logger.debug(msg=f"Logging started from{__name__}")
 
 #The bluez backend logs too much
-bleaklogger: Logger = logging.getLogger("bleak.backends.bluezdbus.manager")
+bleaklogger: Logger = logging.getLogger(name="bleak.backends.bluezdbus.manager")
 bleaklogger.setLevel(level=logging.INFO)
+
+bleakclientlogger: Logger = logging.getLogger(name="bleak.backends.bluezdbus.client")
+bleakclientlogger.setLevel(level=logging.INFO)
 
 
 
@@ -73,9 +76,9 @@ class BLEController:
         asyncio.set_event_loop(loop=self.ble_loop)
         self.ble_loop.run_forever()
 
-    def _run_sync(self, coro, timeout=15):
+    def _run_sync(self, coro, timeout=25):
         """Helper to run async code synchronously from the background thread."""
-        future = asyncio.run_coroutine_threadsafe(coro, loop=self.ble_loop)
+        future: Future[Any] = asyncio.run_coroutine_threadsafe(coro, loop=self.ble_loop)
 
         try:
             result: Any = future.result(timeout=timeout)
@@ -194,7 +197,7 @@ class BLEController:
 
         if onCommandResponse_cb:
 
-            commandcb = self.command_response_callback
+            commandcb = onCommandResponse_cb
             logger.debug("Command response callback is not none, assigning it to notify caller")
 
         try:
@@ -204,7 +207,7 @@ class BLEController:
             )
         except Exception as e:
             logger.error(
-                f"Error registering for notifications from event characterisitic. Exception {e}",
+                msg=f"Error registering for notifications from event characterisitic. Exception {e}",
                 stack_info=True,
             )
             raise
@@ -244,6 +247,10 @@ class BLEController:
                 logger.error(
                     f"Error occured when disconnecting from device. Exception: {e}"
                 )
+        
+        else:
+            logger.warning("Device is not connected")
+            raise ConnectionError("Device not connected")
 
     async def _pair(self, client: BleakClient):
         logger.debug(msg="Pairing with device...")
@@ -276,6 +283,7 @@ class BLEController:
 
         else:
             logger.warning(msg=f"Device {self.ble_client.name} is not connected")
+            raise ConnectionError("Device not connected")
 
     async def _read_char(self, char_name) -> bytearray:
         """Reads from a specified characterisitic"""
@@ -299,6 +307,9 @@ class BLEController:
         else:
             logger.warning(msg=f"Device {self.ble_client.name} is not connected")
 
+            raise ConnectionError("Device not connected")
+
+
         return data
 
     # --- Synchronous Public API ---
@@ -321,8 +332,7 @@ class BLEController:
 
 if __name__ == "__main__":
     import SkiSensorDevTool.utils.logging  # pyright: ignore[reportUnusedImport]  # noqa: F401
-    from SkiSensorDevTool.utils.ss_message import SSMessage
-    import SkiSensorDevTool.utils.return_handler as handler
+
     import time
 
     controller: BLEController = BLEController()
@@ -336,15 +346,7 @@ if __name__ == "__main__":
 
     data: bytearray = controller.read_char(char_name="fw_version")
 
-    fw_version: str = handler.handle_fw_version(raw_value=data)
 
-    logger.debug(f"Firmware version: {fw_version}")
-
-    message: SSMessage = SSMessage(name="ssssid")
-
-    controller.write_char(char_name='control_point', payload=message.name)
-
-    time.sleep(10)
 
 
     controller.disconnect()

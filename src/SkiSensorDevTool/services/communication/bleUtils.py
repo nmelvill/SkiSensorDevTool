@@ -7,7 +7,7 @@ import SkiSensorDevTool.utils.logging
 
 logger: Logger = logging.getLogger(name=__name__)
 logger.setLevel(level=logging.INFO)
-logger.info(msg=f'Hello from {__name__}')
+logger.debug(msg=f'Logging started from {__name__}')
 
 
 def map_gatt_UUID(param_name : str) -> str:
