@@ -118,8 +118,20 @@ class Device(EventDispatcher):
     def get_device_info(self) -> None:
         pass
 
-    def get_errors(self) -> None:
-        pass
+    def get_errors(self) -> list[DeviceError]:
+        logger.debug(msg="Attempting to retrieve the device errors...")
+
+        try:
+            raw_status: bytearray = self.controller.read_char(char_name='error')
+
+        except Exception as e:
+            
+            logger.error(msg=f"Exception occured when reading the device errors: {e}")
+            raise e
+
+        error_tuple: tuple[int, ...] = Message(msg_source=MessageSource.ERRORS, payload=bytes(raw_status)).parse()
+
+        return DeviceError.from_message(raw_input=error_tuple)
 
     def get_logs(self) -> None:
         pass
