@@ -19,8 +19,8 @@ class MessageSource(Enum):
     LOGS = 5
     ERRORS = 6
     NAME = 7
-    RAW_MAG = 8
-    RAW_IMU = 9
+    MAG = 8
+    IMU = 9
     STEPS = 10
     ORIENTATION = 11
     COMMAND_RESP = 12
@@ -39,12 +39,12 @@ format_map: dict[MessageSource, str] = {MessageSource.DEVICE_STATUS : '<5B',
     MessageSource.LOGS : '',
     MessageSource.ERRORS : '<10H',
     MessageSource.NAME : '<32s',
-    MessageSource.RAW_MAG : '<4q',
-    MessageSource.RAW_IMU : '<4q',
+    MessageSource.MAG : '>Q4i3q',
+    MessageSource.IMU : '>Q6i2q',
     MessageSource.STEPS : '<H',
     MessageSource.ORIENTATION : '',
     MessageSource.COMMAND_RESP : '<4s36s',
-    MessageSource.EVENT : '<BB5s',
+    MessageSource.EVENT : '<BB',
     MessageSource.UNKNOWN : ''}
 
 
@@ -57,8 +57,17 @@ class Message:
     def parse(self)-> tuple[Any, ...]:
 
         logger.debug(f"Parsing {self.payload}")
+
+        format : str
+
+        if self.msg_source == MessageSource.EVENT:
+            length: int = len(self.payload)
+            format = format_map[self.msg_source] + f"{length-2}s"
+
+        else:
+            format = format_map[self.msg_source]
         
-        rtn_tuple: tuple[Any, ...] = struct.unpack(format_map[self.msg_source], self.payload)
+        rtn_tuple: tuple[Any, ...] = struct.unpack(format, self.payload)
 
         logger.debug(msg=f"Raw value {self.payload} parsed to {rtn_tuple}")
         
@@ -70,15 +79,17 @@ if __name__ == '__main__':
     raw_status: bytes = b'\x04\x00\x01\x01\x00'
     raw_error_array: bytes = b'\x13\x00\x13\x00\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
     raw_cmd_resp: bytes = b'ssss\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    raw_mag_resp: bytes = b'\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x7f\xff\xff\xff\x80\x00\x00\x00\x00\x00K\xaf\x00\x00\x00\x00\x00\x0f\x870\x00\x00\x00\x00\x00\x00\x00\x00\n\x00\x00\x00\x04\x00\x00\x00'
 
-    status_message: Message = Message(msg_source=MessageSource.DEVICE_STATUS, payload=raw_status)
-    status_message.parse()
+    # status_message: Message = Message(msg_source=MessageSource.DEVICE_STATUS, payload=raw_status)
+    # status_message.parse()
 
-    error_array : Message = Message(msg_source=MessageSource.ERRORS, payload=raw_error_array)
-    error_array.parse()
+    # error_array : Message = Message(msg_source=MessageSource.ERRORS, payload=raw_error_array)
+    # error_array.parse()
 
-    cmd_resp_array : Message = Message(msg_source=MessageSource.COMMAND_RESP, payload=raw_cmd_resp)
-    cmd_resp_array.parse()
+    # cmd_resp_array : Message = Message(msg_source=MessageSource.COMMAND_RESP, payload=raw_cmd_resp)
+    # cmd_resp_array.parse()
 
+    mag_array : tuple = Message(msg_source=MessageSource.MAG, payload=raw_mag_resp).parse()
 
    

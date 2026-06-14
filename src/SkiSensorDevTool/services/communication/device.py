@@ -51,6 +51,7 @@ class Device(EventDispatcher):
 
         return command_response
 
+    
     @staticmethod
     def device_event_cb(sender: BleakGATTCharacteristic, data: bytes) -> DeviceEvent:
         logger.debug(msg=f"Event received to the CALLER from {sender}: {data}")
@@ -59,6 +60,7 @@ class Device(EventDispatcher):
 
         return DeviceEvent.from_message(raw_message=unpack_event)
 
+    
     def connect(self) -> bool:
 
         device: BLEDevice = controller.scan()
@@ -83,6 +85,8 @@ class Device(EventDispatcher):
 
             self.controller.write_char(char_name='control_point', payload=cmd)
 
+            self.state = state
+
         else:
             logger.warning(msg="BLE Client is not connected to a ski sensor")
 
@@ -101,13 +105,35 @@ class Device(EventDispatcher):
 
         status_tuple: tuple[int, ...] = Message(msg_source=MessageSource.DEVICE_STATUS, payload=bytes(raw_status)).parse()
 
-        return DeviceStatus.from_message(raw_message=status_tuple)
+        status: DeviceStatus =  DeviceStatus.from_message(raw_message=status_tuple)
 
-    def get_raw_mag_data(self) -> None:
-        pass
+        self.state = status.state
 
-    def get_raw_imu_data(self) -> None:
-        pass
+        return status
+
+    def get_mag_data(self) -> None:
+        logger.debug(msg="Attempting to retrieve raw magnetometer data...")
+
+        try:
+            raw_data : bytearray = self.controller.read_char(char_name="mag_data")
+
+        except Exception as e:
+            logger.error(msg=f"Exception occured when reading mag data: {e}")
+            raise e
+
+        data_tuple: tuple = Message(msg_source=MessageSource.MAG, payload=bytes(raw_data)).parse()
+
+    def get_imu_data(self) -> None:
+        logger.debug(msg="Attempting to retrieve raw imu data...")
+
+        try:
+            raw_data : bytearray = self.controller.read_char(char_name="imu_data")
+
+        except Exception as e:
+            logger.error(msg=f"Exception occured when reading imu data: {e}")
+            raise e
+
+        data_tuple: tuple = Message(msg_source=MessageSource.IMU, payload=bytes(raw_data)).parse()
 
     def get_steps(self) -> None:
         pass
@@ -155,10 +181,14 @@ if __name__ == "__main__":
     test_device: Device= Device(ble_controller=controller)
     test_device.add_listener(listener=test_listener)
 
-    
+    ## Basic Use
     test_device.connect()
 
-    test_device.set_state(state=DeviceState.IDLE)
+    test_device.set_state(state=DeviceState.UPHILL)
+
+    test_device.get_status()
 
     time.sleep(10)
+
+    test_device.get_imu_data()
     controller.disconnect()
